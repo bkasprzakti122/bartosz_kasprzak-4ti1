@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HelpDesk</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #69626e;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #000000;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .formularz {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #7116e9;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #b57dfd;
+    }
+    .filtry {
+      margin-bottom: 15px;
+    }
+    .filtry button {
+      margin-top: 0;
+      margin-right: 8px;
+      background: #000000;
+    }
+    .filtry button:hover {
+      background: #555;
+    }
+    .filtry button.aktywny {
+      background: #2196F3;
+    }
+    .zgloszenie {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 5px solid #ccc;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .zgloszenie.nowe       { border-left-color: #219bff; }
+    .zgloszenie.w-trakcie  { border-left-color: #ffc926; }
+    .zgloszenie.zamkniete  { border-left-color: #4cbd50; }
+    .zgloszenie h3 {
+      margin: 0 0 6px 0;
+    }
+    .zgloszenie p {
+      margin: 3px 0;
+      font-size: 14px;
+      color: #050505;
+    }
+    .zgloszenie select {
+      width: auto;
+      margin-top: 8px;
+      padding: 5px;
+    }
+    .btn-usun {
+      background: #e53935;
+      padding: 5px 12px;
+      font-size: 13px;
+      margin-top: 8px;
+      margin-left: 8px;
+    }
+    .btn-usun:hover {
+      background: #b71c1c;
+    }
+    #komunikat {
+      color: green;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .liczniki {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .licznik {
+      background: rgb(255, 255, 255);
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-align: center;
+      flex: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .licznik span {
+      display: block;
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>System Zgłoszeń do HelpDesku</h1>
+
+  <div class="formularz">
+    <h2>Dodaj zgłoszenie</h2>
+
+    <label>Tytuł problemu:</label>
+    <input type="text" id="tytul" placeholder="Np. Moja drukarka nie działa...">
+
+    <label>Twój e-mail:</label>
+    <input type="text" id="email" placeholder="imie@gmail.com">
+
+    <label>Kategoria:</label>
+    <select id="kategoria">
+      <option value="">-wybierz-</option>
+      <option value="Hardware">Problem z hardware</option>
+      <option value="Software">Problem z software</option>
+      <option value="Sieć">Problem z siecia</option>
+      <option value="Inne">Inne problemy</option>
+    </select>
+
+    <label>Opis problemu:</label>
+    <textarea id="opis" rows="3" placeholder="Opisz co się stało..."></textarea>
+
+    <button id="btnDodaj">Dodaj zgłoszenie</button>
+    <div id="komunikat"></div>
+  </div>
+
+  <div class="liczniki">
+    <div class="licznik">Wszystkie<span id="liczbWszystkich">0</span></div>
+    <div class="licznik">Nowe<span id="liczbNowych">0</span></div>
+    <div class="licznik">W trakcie<span id="liczbWTrakcie">0</span></div>
+    <div class="licznik">Zamknięte<span id="liczbZamknietych">0</span></div>
+  </div>
+
+  <div class="filtry">
+    <button id="btnWszystkie" class="aktywny" onclick="ustawFiltr('wszystkie')">Wszystkie</button>
+    <button onclick="ustawFiltr('nowe')">Nowe</button>
+    <button onclick="ustawFiltr('w-trakcie')">W trakcie</button>
+    <button onclick="ustawFiltr('zamkniete')">Zamknięte</button>
+  </div>
+
+  <div id="lista"></div>
+</div>
+
+<script>
+
+  var zgloszenia = [];
+
+  var aktualnyFiltr = "wszystkie";
+
+  function wczytajZLocalStorage() {
+    var zapisane = localStorage.getItem("zgloszenia");
+    if (zapisane) {
+      zgloszenia = JSON.parse(zapisane);
+    }
+  }
+
+  function zapiszDoLocalStorage() {
+    localStorage.setItem("zgloszenia", JSON.stringify(zgloszenia));
+  }
+
+  document.getElementById("btnDodaj").addEventListener("click", function() {
+
+    var tytul    = document.getElementById("tytul").value;
+    var email    = document.getElementById("email").value;
+    var kategoria = document.getElementById("kategoria").value;
+    var opis     = document.getElementById("opis").value;
+    var komunikat = document.getElementById("komunikat");
+
+    if (tytul == "" || email == "" || kategoria == "" || opis == "") {
+      komunikat.style.color = "red";
+      komunikat.textContent = "Wypełnij wszystkie pola!";
+      return;
+    }
+
+    var noweZgloszenie = {
+      id:        Date.now(),
+      tytul:     tytul,
+      email:     email,
+      kategoria: kategoria,
+      opis:      opis,
+      status:    "nowe",
+      data:      new Date().toLocaleDateString("pl-PL")
+    };
+
+    zgloszenia.push(noweZgloszenie);
+
+    zapiszDoLocalStorage();
+
+    document.getElementById("tytul").value     = "";
+    document.getElementById("email").value     = "";
+    document.getElementById("kategoria").value = "";
+    document.getElementById("opis").value      = "";
+
+    komunikat.style.color = "green";
+    komunikat.textContent = "Zgłoszenie dodane!";
+
+    wyswietlZgloszenia();
+  });
+
+  function ustawFiltr(filtr) {
+    aktualnyFiltr = filtr;
+
+    var przyciski = document.getElementsByClassName("filtry")[0].getElementsByTagName("button");
+    for (var i = 0; i < przyciski.length; i++) {
+      przyciski[i].classList.remove("aktywny");
+    }
+
+    if (filtr == "wszystkie")  document.getElementById("btnWszystkie").classList.add("aktywny");
+
+    wyswietlZgloszenia();
+  }
+
+  function wyswietlZgloszenia() {
+    var lista = document.getElementById("lista");
+    lista.innerHTML = "";
+
+    var ileNowych      = 0;
+    var ileWTrakcie    = 0;
+    var ileZamknietych = 0;
+
+    for (var i = 0; i < zgloszenia.length; i++) {
+      if (zgloszenia[i].status == "nowe")       ileNowych++;
+      if (zgloszenia[i].status == "w-trakcie")  ileWTrakcie++;
+      if (zgloszenia[i].status == "zamkniete")  ileZamknietych++;
+    }
+
+    document.getElementById("liczbWszystkich").textContent  = zgloszenia.length;
+    document.getElementById("liczbNowych").textContent      = ileNowych;
+    document.getElementById("liczbWTrakcie").textContent    = ileWTrakcie;
+    document.getElementById("liczbZamknietych").textContent = ileZamknietych;
+
+    for (var j = 0; j < zgloszenia.length; j++) {
+      var z = zgloszenia[j];
+
+      if (aktualnyFiltr != "wszystkie" && z.status != aktualnyFiltr) {
+        continue;
+      }
+
+      var div = document.createElement("div");
+      div.className = "zgloszenie " + z.status;
+
+      div.innerHTML =
+        "<h3>" + z.tytul + "</h3>" +
+        "<p>email: " + z.email + " &nbsp;|&nbsp; kategoria: " + z.kategoria + " &nbsp;|&nbsp; data: " + z.data + "</p>" +
+        "<p>" + z.opis + "</p>" +
+        "<select onchange='zmienStatus(" + z.id + ", this.value)'>" +
+          "<option value='nowe'"      + (z.status == "nowe"      ? " selected" : "") + ">Nowe</option>" +
+          "<option value='w-trakcie'" + (z.status == "w-trakcie" ? " selected" : "") + ">W trakcie</option>" +
+          "<option value='zamkniete'" + (z.status == "zamkniete" ? " selected" : "") + ">Zamknięte</option>" +
+        "</select>" +
+        "<button class='btn-usun' onclick='usunZgloszenie(" + z.id + ")'>Usuń</button>";
+
+      lista.appendChild(div);
+    }
+
+    if (lista.innerHTML == "") {
+      lista.innerHTML = "<p style='text-align:center; color:#888;'>Brak zgłoszeń.</p>";
+    }
+  }
+
+  function zmienStatus(id, nowyStatus) {
+    for (var i = 0; i < zgloszenia.length; i++) {
+      if (zgloszenia[i].id == id) {
+        zgloszenia[i].status = nowyStatus;
+      }
+    }
+    zapiszDoLocalStorage();
+    wyswietlZgloszenia();
+  }
+
+  function usunZgloszenie(id) {
+    if (!confirm("Czy na pewno chcesz usunąć to zgłoszenie?")) return;
+
+    var nowa = [];
+    for (var i = 0; i < zgloszenia.length; i++) {
+      if (zgloszenia[i].id != id) {
+        nowa.push(zgloszenia[i]);
+      }
+    }
+    zgloszenia = nowa;
+    zapiszDoLocalStorage();
+    wyswietlZgloszenia();
+  }
+
+  wczytajZLocalStorage();
+  wyswietlZgloszenia();
+
+</script>
+</body>
+</html>
